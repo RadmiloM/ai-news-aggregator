@@ -44,8 +44,8 @@ describe('RssProvider image extraction', () => {
     });
   });
 
-    it('checks media content, thumbnail, image enclosure, then the first content or description image', async () => {
-        const xml = `<?xml version="1.0"?>
+  it('checks media content, thumbnail, image enclosure, then the first content or description image', async () => {
+    const xml = `<?xml version="1.0"?>
             <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
               <channel><title>Test</title><link>https://news.example/</link>
                 <item><title>Media content</title><link>https://news.example/1</link>
@@ -70,16 +70,16 @@ describe('RssProvider image extraction', () => {
                 </item>
               </channel>
             </rss>`;
-        vi.stubGlobal('fetch', vi.fn(async () => new Response(xml, { headers: { 'content-type': 'application/rss+xml' } })));
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(xml, { headers: { 'content-type': 'application/rss+xml' } })));
 
-        const articles = await new RssProvider('Test News', 'https://news.example/feed.xml').fetchArticles();
+    const articles = await new RssProvider('Test News', 'https://news.example/feed.xml').fetchArticles();
 
-        expect(articles.map((article) => article.imageUrl)).toEqual([
-            'https://news.example/media-content.jpg',
-            'https://news.example/thumbnail.jpg',
-            'https://news.example/enclosure.jpg',
-            'https://news.example/first.jpg',
-            'https://news.example/description.jpg',
-        ]);
-    });
+    expect(articles.map((article) => article.imageUrl)).toEqual([
+      'https://news.example/media-content.jpg',
+      'https://news.example/thumbnail.jpg',
+      'https://news.example/enclosure.jpg',
+      'https://news.example/first.jpg',
+      'https://news.example/description.jpg',
+    ]);
+  });
 });

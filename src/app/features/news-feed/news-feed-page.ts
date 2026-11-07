@@ -7,21 +7,21 @@ import { ThemeToggle } from '../../shared/components/theme-toggle/theme-toggle';
 import { NewsCard } from './news-card';
 
 const categories: { id: NewsCategory | 'all'; label: string }[] = [
-    { id: 'all', label: 'Top stories' },
-    { id: 'world', label: 'World' },
-    { id: 'tech', label: 'Technology' },
-    { id: 'business', label: 'Business' },
-    { id: 'sports', label: 'Sport' },
-    { id: 'science', label: 'Science' },
-    { id: 'serbia', label: 'Serbia' },
-    { id: 'general', label: 'General' },
+  { id: 'all', label: 'Top stories' },
+  { id: 'world', label: 'World' },
+  { id: 'tech', label: 'Technology' },
+  { id: 'business', label: 'Business' },
+  { id: 'sports', label: 'Sport' },
+  { id: 'science', label: 'Science' },
+  { id: 'serbia', label: 'Serbia' },
+  { id: 'general', label: 'General' },
 ];
 
 @Component({
-    selector: 'app-news-feed-page',
-    standalone: true,
-    imports: [DatePipe, FormsModule, NewsCard, ThemeToggle],
-    template: `
+  selector: 'app-news-feed-page',
+  standalone: true,
+  imports: [DatePipe, FormsModule, NewsCard, ThemeToggle],
+  template: `
     <div class="page-shell">
       <header class="masthead">
         <a class="brand" href="/" aria-label="The Daily Brief home"><span class="brand-mark">DB</span><span class="brand-name">The Daily Brief</span></a>
@@ -67,7 +67,7 @@ const categories: { id: NewsCategory | 'all'; label: string }[] = [
       <footer class="page-footer"><span>THE DAILY BRIEF</span><span>Stories belong to their original publishers.</span><span>Built for a more informed day.</span></footer>
     </div>
   `,
-    styles: [`
+  styles: [`
     :host { display: block; }
     .page-shell { width: min(1440px, 100%); margin: 0 auto; padding: 0 clamp(20px, 5vw, 76px); }
     .masthead { display: flex; align-items: center; justify-content: space-between; min-height: 69px; border-bottom: 1px solid var(--line); gap: 18px; }
@@ -145,43 +145,43 @@ const categories: { id: NewsCategory | 'all'; label: string }[] = [
   `],
 })
 export class NewsFeedPage implements OnInit, OnDestroy {
-    readonly store = inject(NewsFeedStore);
-    readonly selectedCategory = signal<NewsCategory | 'all'>('all');
-    readonly selectedSource = signal('all');
-    readonly query = signal('');
-    readonly today = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
-    readonly visibleCategories = computed(() => categories.filter((category) =>
-        category.id === 'all' || this.store.articles().some((article) => article.category === category.id)));
-    readonly editionLabel = computed(() => {
-        const activeSources = this.store.sourceStatus().filter((source) => source.ok).map((source) => source.name);
-        const isSerbiaSource = (source: string) => /^(n1 serbia|danas|blic|politika|rts|b92)$/i.test(source);
-        const hasSerbia = activeSources.some(isSerbiaSource);
-        const hasGlobal = activeSources.some((source) => !isSerbiaSource(source));
-        if (hasGlobal && hasSerbia) return 'Global + Serbia';
-        if (hasSerbia) return 'Serbia edition';
-        return hasGlobal ? 'Global edition' : 'News edition';
+  readonly store = inject(NewsFeedStore);
+  readonly selectedCategory = signal<NewsCategory | 'all'>('all');
+  readonly selectedSource = signal('all');
+  readonly query = signal('');
+  readonly today = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
+  readonly visibleCategories = computed(() => categories.filter((category) =>
+    category.id === 'all' || this.store.articles().some((article) => article.category === category.id)));
+  readonly editionLabel = computed(() => {
+    const activeSources = this.store.sourceStatus().filter((source) => source.ok).map((source) => source.name);
+    const isSerbiaSource = (source: string) => /^(n1 serbia|danas|blic|politika|rts|b92)$/i.test(source);
+    const hasSerbia = activeSources.some(isSerbiaSource);
+    const hasGlobal = activeSources.some((source) => !isSerbiaSource(source));
+    if (hasGlobal && hasSerbia) return 'Global + Serbia';
+    if (hasSerbia) return 'Serbia edition';
+    return hasGlobal ? 'Global edition' : 'News edition';
+  });
+  readonly unavailableSources = computed(() => this.store.sourceStatus().filter((source) => !source.ok).map((source) => source.name).join(', '));
+  readonly unavailableSourceStatuses = computed(() => this.store.sourceStatus().filter((source) => !source.ok));
+  readonly filteredArticles = computed(() => {
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    const query = this.query().trim().toLowerCase();
+    return this.store.articles().filter((article) => {
+      const isToday = new Date(article.publishedAt).getTime() >= since;
+      const matchesCategory = this.selectedCategory() === 'all' || article.category === this.selectedCategory();
+      const matchesSource = this.selectedSource() === 'all' || (article.sources ?? [article.source]).includes(this.selectedSource());
+      const matchesQuery = !query || `${article.title} ${article.summary} ${article.source} ${(article.sources ?? []).join(' ')}`.toLowerCase().includes(query);
+      return isToday && matchesCategory && matchesSource && matchesQuery;
     });
-    readonly unavailableSources = computed(() => this.store.sourceStatus().filter((source) => !source.ok).map((source) => source.name).join(', '));
-    readonly unavailableSourceStatuses = computed(() => this.store.sourceStatus().filter((source) => !source.ok));
-    readonly filteredArticles = computed(() => {
-        const since = Date.now() - 24 * 60 * 60 * 1000;
-        const query = this.query().trim().toLowerCase();
-        return this.store.articles().filter((article) => {
-            const isToday = new Date(article.publishedAt).getTime() >= since;
-            const matchesCategory = this.selectedCategory() === 'all' || article.category === this.selectedCategory();
-            const matchesSource = this.selectedSource() === 'all' || (article.sources ?? [article.source]).includes(this.selectedSource());
-            const matchesQuery = !query || `${article.title} ${article.summary} ${article.source} ${(article.sources ?? []).join(' ')}`.toLowerCase().includes(query);
-            return isToday && matchesCategory && matchesSource && matchesQuery;
-        });
-    });
-    private refreshTimer?: ReturnType<typeof setInterval>;
+  });
+  private refreshTimer?: ReturnType<typeof setInterval>;
 
-    ngOnInit(): void {
-        void this.store.refresh();
-        this.refreshTimer = setInterval(() => void this.store.refresh(), 10 * 60 * 1000);
-    }
+  ngOnInit(): void {
+    void this.store.refresh();
+    this.refreshTimer = setInterval(() => void this.store.refresh(), 10 * 60 * 1000);
+  }
 
-    ngOnDestroy(): void { if (this.refreshTimer) clearInterval(this.refreshTimer); }
-    refresh(): void { void this.store.refresh(); }
-    clearFilters(): void { this.selectedCategory.set('all'); this.selectedSource.set('all'); this.query.set(''); }
+  ngOnDestroy(): void { if (this.refreshTimer) clearInterval(this.refreshTimer); }
+  refresh(): void { void this.store.refresh(); }
+  clearFilters(): void { this.selectedCategory.set('all'); this.selectedSource.set('all'); this.query.set(''); }
 }
