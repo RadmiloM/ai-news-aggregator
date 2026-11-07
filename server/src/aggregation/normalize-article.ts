@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { inferCategory } from './category.js';
-import { Article, NewsCategory } from '../types/article.js';
+import { Article } from '../types/article.js';
 
 export interface ArticleInput {
     title?: unknown;
@@ -50,7 +50,7 @@ export function normalizeArticle(input: ArticleInput, source: string): Article |
     const publishedAtValue = typeof input.publishedAt === 'string' || typeof input.publishedAt === 'number' ? new Date(input.publishedAt) : new Date();
     const publishedAt = Number.isFinite(publishedAtValue.getTime()) ? publishedAtValue.toISOString() : new Date().toISOString();
     const categoryHint = typeof input.category === 'string' ? input.category : '';
-    const category = inferCategory(title, summary, categoryHint) as NewsCategory;
+    const category = inferCategory(title, summary, categoryHint, url, source);
     return {
         id: articleId(url, title), title, summary, source, sources: [source], url,
         imageUrl: safeHttpUrl(input.imageUrl), publishedAt, category,

@@ -15,9 +15,9 @@ npm install --prefix server
 Copy-Item .env.example .env
 ```
 
-RSS is the default source and needs no API keys. Add optional `NEWS_API_KEY` and/or `GNEWS_API_KEY` to `.env`. Add `GEMINI_API_KEY` to enable generated summaries; without it, expanded cards use the publisher description. Never add keys to Angular source or client environment files.
+RSS is the default source and needs no API keys. Defaults include BBC, Guardian World, Al Jazeera, N1 Serbia, and Danas. Add optional `NEWS_API_KEY` and/or `GNEWS_API_KEY` to `.env`. Add `GEMINI_API_KEY` to enable generated summaries; without it, expanded cards use the publisher description. Never add keys to Angular source or client environment files.
 
-Feed URLs can be overridden with the `RSS_*_URL` variables. RSS availability and publisher terms can change; unavailable feeds are reported in the API response while working sources continue to appear.
+Feed URLs can be overridden with the `RSS_*_URL` variables documented in `.env.example`. RSS availability and publisher terms can change; unavailable feeds are reported in the API response while working sources continue to appear.
 
 ## Run
 
@@ -48,12 +48,12 @@ npm run build
 - `src/app/shared/components/` — theme control
 - `server/src/providers/` — provider interface plus RSS, NewsAPI, and GNews adapters
 - `server/src/aggregation/` — article normalization, title similarity, deduplication, category mapping, and ranking
-- `server/src/services/` — 10-minute feed cache and Gemini summary cache/queue/quota controls
+- `server/src/services/` — feed cache, on-demand article image metadata lookup, and Gemini summary cache/queue/quota controls
 - `server/src/routes/` — `/api/news`, `/api/summarize`, and `/api/health`
 
 ## Behavior and limits
 
-The Today feed covers the previous 24 hours. Story importance combines exponential recency decay and unique-publisher coverage. Similarity matching uses normalized title-token overlap. The API keeps feed responses for 10 minutes; summary results are cached for 24 hours by canonical article URL or article id.
+The Today feed covers the previous 24 hours. Story importance combines exponential recency decay and unique-publisher coverage. Similarity matching uses normalized title-token overlap. The API keeps feed responses for 10 minutes; summary results are cached for 24 hours by canonical article URL or article id. Missing RSS images are looked up from article Open Graph metadata when their cards approach the viewport; results and misses are cached for 24 hours with a 3-second timeout and at most five concurrent lookups.
 
 Gemini per-minute/day limits, per-IP request limits, concurrency, and queue size are configurable in `.env.example`. The counters and caches are in-memory and reset when the server restarts, so run one API instance unless you replace them with shared storage. The summary endpoint accepts bounded article metadata and never fetches the submitted URL.
 

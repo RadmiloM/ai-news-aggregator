@@ -20,11 +20,11 @@ describe('headline normalization and deduplication', () => {
     it('merges similar headlines across publishers and counts unique sources', () => {
         const merged = deduplicateArticles([
             article(),
-            article({ id: 'two', source: 'Reuters', sources: ['Reuters'], title: 'Major climate summit opens in Geneva today', url: 'https://wire.example/climate' }),
-            article({ id: 'three', source: 'Reuters', sources: ['Reuters'], title: 'Major climate summit opens in Geneva today', url: 'https://wire.example/climate?utm_source=feed' }),
+            article({ id: 'two', source: 'Guardian World', sources: ['Guardian World'], title: 'Major climate summit opens in Geneva today', url: 'https://wire.example/climate' }),
+            article({ id: 'three', source: 'Guardian World', sources: ['Guardian World'], title: 'Major climate summit opens in Geneva today', url: 'https://wire.example/climate?utm_source=feed' }),
         ]);
         expect(merged).toHaveLength(1);
-        expect(merged[0]?.sources).toEqual(['BBC News', 'Reuters']);
+        expect(merged[0]?.sources).toEqual(['BBC News', 'Guardian World']);
     });
 
     it('keeps unrelated stories separate', () => {
@@ -38,7 +38,7 @@ describe('headline normalization and deduplication', () => {
 describe('ranking and Today window', () => {
     it('balances recency with unique source coverage', () => {
         const recent = article({ id: 'recent', publishedAt: new Date(now - 30 * 60 * 1000).toISOString(), sources: ['BBC News'] });
-        const covered = article({ id: 'covered', publishedAt: new Date(now - 5 * 60 * 60 * 1000).toISOString(), sources: ['BBC News', 'Reuters', 'Al Jazeera', 'B92'] });
+        const covered = article({ id: 'covered', publishedAt: new Date(now - 5 * 60 * 60 * 1000).toISOString(), sources: ['BBC News', 'Guardian World', 'Al Jazeera', 'Danas'] });
         expect(rankArticles([recent, covered], now)[0]?.id).toBe('covered');
     });
 

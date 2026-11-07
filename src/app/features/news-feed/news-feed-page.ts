@@ -13,6 +13,8 @@ const categories: { id: NewsCategory | 'all'; label: string }[] = [
     { id: 'business', label: 'Business' },
     { id: 'sports', label: 'Sport' },
     { id: 'science', label: 'Science' },
+    { id: 'serbia', label: 'Serbia' },
+    { id: 'general', label: 'General' },
 ];
 
 @Component({
@@ -23,7 +25,7 @@ const categories: { id: NewsCategory | 'all'; label: string }[] = [
     <div class="page-shell">
       <header class="masthead">
         <a class="brand" href="/" aria-label="The Daily Brief home"><span class="brand-mark">DB</span><span class="brand-name">The Daily Brief</span></a>
-        <div class="edition"><span class="live-dot"></span> GLOBAL EDITION <span class="edition-rule"></span> {{ today }}</div>
+        <div class="edition"><span class="live-dot"></span> {{ editionLabel() }} <span class="edition-rule"></span><span class="edition-date">{{ today }}</span></div>
         <div class="header-actions"><span class="auto-status"><span class="live-dot"></span> Updates every 10 min</span><app-theme-toggle /></div>
       </header>
       <main>
@@ -37,13 +39,14 @@ const categories: { id: NewsCategory | 'all'; label: string }[] = [
             <div class="feed-status">@if (store.updatedAt()) { <span>Updated {{ store.updatedAt() | date: 'shortTime' }}</span> }<button class="refresh-button" type="button" (click)="refresh()" [disabled]="store.refreshing()" aria-label="Refresh headlines"><span [class.spinning]="store.refreshing()" aria-hidden="true">↻</span> {{ store.refreshing() ? 'Refreshing' : 'Refresh' }}</button></div>
           </div>
           <nav class="category-nav" aria-label="Filter by category">
-            @for (category of categories; track category.id) { <button type="button" [class.active]="selectedCategory() === category.id" (click)="selectedCategory.set(category.id)">{{ category.label }}</button> }
+            @for (category of visibleCategories(); track category.id) { <button type="button" [class.active]="selectedCategory() === category.id" (click)="selectedCategory.set(category.id)">{{ category.label }}</button> }
           </nav>
           <div class="filters">
             <label class="search-field"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search today’s stories" [ngModel]="query()" (ngModelChange)="query.set($event)" aria-label="Search headlines" /></label>
             <label class="source-filter"><span>Source</span><select [ngModel]="selectedSource()" (ngModelChange)="selectedSource.set($event)" aria-label="Filter by news source"><option value="all">All sources</option>@for (source of store.sources(); track source) { <option [value]="source">{{ source }}</option> }</select></label>
             <span class="result-count">{{ filteredArticles().length }} STORIES</span>
           </div>
+          @if (unavailableSources()) { <div class="partial-warning" role="status">Unavailable sources: {{ unavailableSources() }}. @if (store.articles().length) { Showing available stories. } @else { No stories are available from the remaining sources. }</div> }
           @if (store.loading()) {
             <div class="story-grid" aria-label="Loading headlines" aria-busy="true">@for (item of [1, 2, 3, 4, 5]; track item) { <div class="skeleton"><div class="skeleton-image"></div><div class="skeleton-lines"><i></i><i></i><i></i></div></div> }</div>
           } @else if (store.error() && !store.articles().length) {
@@ -51,7 +54,6 @@ const categories: { id: NewsCategory | 'all'; label: string }[] = [
           } @else if (!filteredArticles().length) {
             <div class="state-panel"><span class="state-mark">—</span><div><h3>No stories in this edition.</h3><p>Try another topic or clear your search.</p><button class="text-button" type="button" (click)="clearFilters()">Clear filters</button></div></div>
           } @else {
-            @if (store.error() || unavailableSources()) { <div class="partial-warning" role="status">Some sources are temporarily unavailable@if (unavailableSources()) { ({{ unavailableSources() }})}. Showing the stories we could reach.</div> }
             <div class="story-grid">@for (article of filteredArticles(); track article.id; let first = $first) { <app-news-card [article]="article" [featured]="first" /> }</div>
           }
           @if (store.sourceStatus().length) { <footer class="source-credits"><span>REPORTING FROM</span>@for (source of store.sourceStatus(); track source.name) { @if (source.ok) { <span class="credit-name">{{ source.name }}</span> } }</footer> }
@@ -128,18 +130,30 @@ const categories: { id: NewsCategory | 'all'; label: string }[] = [
     .credit-name { color: var(--ink); font-weight: 600; letter-spacing: 0; }
     .page-footer { display: flex; justify-content: space-between; gap: 16px; padding: 17px 0 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
     .page-footer span:first-child { color: var(--accent); font-weight: 700; letter-spacing: .1em; }
-    @media (min-width: 1100px) { .story-grid app-news-card:first-child { min-height: 450px; } }
+    @media (min-width: 1100px) { .story-grid app-news-card:first-child { max-height: 450px; } }
     @media (max-width: 860px) { .edition { display: none; } .story-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .story-grid app-news-card:first-child { grid-column: span 2; grid-row: auto; } .intro { min-height: 285px; } .edition-stamp { margin-right: 20px; } }
     @media (max-width: 600px) { .page-shell { padding-inline: 16px; } .masthead { min-height: 60px; } .brand-name { font-size: 16px; } .auto-status { display: none; } .intro { min-height: 270px; padding-block: 38px 30px; } .intro h1 { font-size: 62px; } .intro-deck { max-width: 260px; font-size: 12px; } .edition-stamp { position: absolute; right: 0; top: 49px; width: 72px; height: 72px; margin: 0; font-size: 5px; } .edition-stamp strong { font-size: 28px; } .edition-stamp i { right: 3px; top: 10px; } .intro-note { display: none; } .feed-section { padding-top: 27px; } .section-heading h2 { font-size: 28px; } .feed-status { gap: 8px; font-size: 9px; } .refresh-button { min-height: 35px; padding-inline: 9px; } .category-nav { gap: 22px; margin-top: 18px; } .filters { flex-wrap: wrap; gap: 8px 14px; padding-block: 11px; } .search-field { flex-basis: 100%; max-width: none; } .source-filter { flex: 1; } .source-filter select { flex: 1; max-width: none; } .story-grid { grid-template-columns: 1fr; gap: 12px; padding-top: 14px; } .story-grid app-news-card:first-child { grid-column: auto; } .page-footer { flex-wrap: wrap; } .page-footer span:last-child { display: none; } }
+    @media (max-width: 860px) { .edition { display: flex; } }
+    @media (max-width: 600px) { .masthead { gap: 8px; } .edition { gap: 5px; font-size: 8px; letter-spacing: .04em; white-space: nowrap; } .edition-rule, .edition-date { display: none; } .header-actions { gap: 0; } }
   `],
 })
 export class NewsFeedPage implements OnInit, OnDestroy {
     readonly store = inject(NewsFeedStore);
-    readonly categories = categories;
     readonly selectedCategory = signal<NewsCategory | 'all'>('all');
     readonly selectedSource = signal('all');
     readonly query = signal('');
     readonly today = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
+    readonly visibleCategories = computed(() => categories.filter((category) =>
+        category.id === 'all' || this.store.articles().some((article) => article.category === category.id)));
+    readonly editionLabel = computed(() => {
+        const activeSources = this.store.sourceStatus().filter((source) => source.ok).map((source) => source.name);
+        const isSerbiaSource = (source: string) => /^(n1 serbia|danas|blic|politika|rts|b92)$/i.test(source);
+        const hasSerbia = activeSources.some(isSerbiaSource);
+        const hasGlobal = activeSources.some((source) => !isSerbiaSource(source));
+        if (hasGlobal && hasSerbia) return 'Global + Serbia';
+        if (hasSerbia) return 'Serbia edition';
+        return hasGlobal ? 'Global edition' : 'News edition';
+    });
     readonly unavailableSources = computed(() => this.store.sourceStatus().filter((source) => !source.ok).map((source) => source.name).join(', '));
     readonly filteredArticles = computed(() => {
         const since = Date.now() - 24 * 60 * 60 * 1000;

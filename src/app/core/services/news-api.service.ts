@@ -11,6 +11,10 @@ export class NewsApiService {
         return this.http.get<NewsFeedResponse>('/api/news');
     }
 
+    getArticleImage(id: string): Observable<{ imageUrl: string | null }> {
+        return this.http.get<{ imageUrl: string | null }>(`/api/article-image/${encodeURIComponent(id)}`);
+    }
+
     summarize(article: Article): Observable<SummaryResponse> {
         return this.http.post<SummaryResponse>('/api/summarize', {
             id: article.id,

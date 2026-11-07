@@ -1,4 +1,4 @@
-export type NewsCategory = 'world' | 'tech' | 'business' | 'sports' | 'science' | 'health' | 'culture' | 'other';
+export type NewsCategory = 'world' | 'tech' | 'business' | 'sports' | 'science' | 'serbia' | 'general';
 
 export interface Article {
     id: string;

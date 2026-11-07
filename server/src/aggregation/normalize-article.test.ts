@@ -32,4 +32,17 @@ describe('normalizeArticle', () => {
         const clean = normalizeArticle({ title: 'A stable headline', url: 'https://news.example/story' }, 'Example');
         expect(original?.id).toBe(clean?.id);
     });
+
+    it('uses RSS category tags and story keywords in the supported categories', () => {
+        expect(normalizeArticle({ title: 'A new report', url: 'https://news.example/story', category: 'business' }, 'Example')?.category).toBe('business');
+        expect(normalizeArticle({ title: 'Nauka otkriva novu planetu', url: 'https://news.example/story' }, 'Example')?.category).toBe('science');
+        expect(normalizeArticle({ title: 'A new studio opens', url: 'https://news.example/technology/startup' }, 'Example')?.category).toBe('tech');
+    });
+
+    it('maps N1 section paths before keyword inference and uses source-aware fallbacks', () => {
+        expect(normalizeArticle({ title: 'Local team wins', url: 'https://n1info.rs/sport/vest' }, 'N1 Serbia')?.category).toBe('sports');
+        expect(normalizeArticle({ title: 'A new film premieres', url: 'https://n1info.rs/scena/vest' }, 'N1 Serbia')?.category).toBe('serbia');
+        expect(normalizeArticle({ title: 'A local report', url: 'https://n1info.rs/vesti/vest' }, 'N1 Serbia')?.category).toBe('serbia');
+        expect(normalizeArticle({ title: 'A local report', url: 'https://news.example/story' }, 'Example')?.category).toBe('general');
+    });
 });

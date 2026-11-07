@@ -2,12 +2,36 @@ import { Request, Response, Router } from 'express';
 import { NewsCategory } from '../types/article.js';
 import { NewsFeedService } from '../services/news-feed-service.js';
 import { SummaryService } from '../services/summary-service.js';
+import { ArticleImageService } from '../services/article-image-service.js';
 
-const validCategories = new Set<NewsCategory>(['world', 'tech', 'business', 'sports', 'science', 'health', 'culture', 'other']);
+const validCategories = new Set<NewsCategory>(['world', 'tech', 'business', 'sports', 'science', 'serbia', 'general']);
 
-export function createApiRouter(news: NewsFeedService, summaries: SummaryService): Router {
+export function createApiRouter(news: NewsFeedService, summaries: SummaryService, images: ArticleImageService): Router {
     const router = Router();
     router.get('/health', (_request, response) => response.json({ status: 'ok' }));
+
+    router.get('/article-image/:id', async (request: Request, response: Response) => {
+        const id = request.params['id'];
+        if (typeof id !== 'string' || !/^[a-f0-9]{20}$/i.test(id)) {
+            response.status(400).json({ error: 'The story id is invalid.' });
+            return;
+        }
+        try {
+            const article = (await news.getNews()).articles.find((item) => item.id === id);
+            if (!article) {
+                response.status(404).json({ error: 'The story was not found.' });
+                return;
+            }
+            if (article.imageUrl) {
+                response.json({ imageUrl: article.imageUrl });
+                return;
+            }
+            response.json({ imageUrl: await images.getImage(article.url) });
+        } catch (error) {
+            console.warn('Article image lookup failed:', error);
+            response.status(502).json({ error: 'The article image could not be retrieved.' });
+        }
+    });
 
     router.get('/news', async (request: Request, response: Response) => {
         try {

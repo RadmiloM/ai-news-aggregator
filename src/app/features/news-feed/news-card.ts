@@ -1,7 +1,9 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, Input, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, inject, Input, OnDestroy, signal, ViewChild } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { Article } from '../../core/models/article.model';
 import { NewsFeedStore } from '../../core/services/news-feed.store';
+import { NewsApiService } from '../../core/services/news-api.service';
 
 @Component({
     selector: 'app-news-card',
@@ -9,9 +11,9 @@ import { NewsFeedStore } from '../../core/services/news-feed.store';
     imports: [DatePipe],
     template: `
     <article class="story" [class.story-featured]="featured">
-      <a class="story-image" [href]="article.url" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Read ' + article.title + ' at ' + article.source">
-        @if (article.imageUrl && !imageFailed()) {
-          <img [src]="article.imageUrl" alt="" loading="lazy" (error)="imageFailed.set(true)" />
+      <a #imageTrigger class="story-image" [href]="article.url" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Read ' + article.title + ' at ' + article.source">
+        @if ((article.imageUrl || fallbackImage()) && !imageFailed()) {
+          <img [src]="article.imageUrl || fallbackImage()" alt="" loading="lazy" (error)="onImageError()" />
         } @else {
           <span class="image-fallback" aria-hidden="true"><i></i><b></b><em></em></span>
         }
@@ -50,9 +52,9 @@ import { NewsFeedStore } from '../../core/services/news-feed.store';
     styles: [`
     :host { display: block; min-width: 0; }
     .story { display: grid; grid-template-columns: minmax(0, 1fr); height: 100%; background: var(--surface-raised); border: 1px solid var(--line); animation: rise-in .45s both; }
-    .story-featured { grid-template-columns: minmax(0, 1.08fr) minmax(250px, .92fr); }
+    .story-featured { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-height: 450px; }
     .story-image { position: relative; display: block; aspect-ratio: 1.72; overflow: hidden; background: linear-gradient(135deg, #53645d, #b2a88f 48%, #c77b5d); }
-    .story-featured .story-image { aspect-ratio: auto; min-height: 310px; }
+    .story-featured .story-image { aspect-ratio: auto; min-height: 0; }
     .story-image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.2,.7,.2,1); }
     .story-image:hover img { transform: scale(1.035); }
     .image-category { position: absolute; bottom: 12px; left: 12px; padding: 6px 9px; color: #fff; background: rgb(25 31 27 / 78%); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
@@ -70,8 +72,9 @@ import { NewsFeedStore } from '../../core/services/news-feed.store';
     h2 { margin: 12px 0 0; font-family: 'Newsreader', Georgia, serif; font-size: clamp(21px, 2vw, 27px); font-weight: 500; line-height: 1.16; }
     h2 a { text-decoration: none; text-decoration-color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 4px; }
     h2 a:hover { text-decoration: underline; }
-    .story-featured h2 { max-width: 22ch; font-size: clamp(28px, 3.2vw, 43px); line-height: 1.08; }
+    .story-featured h2 { max-width: 22ch; font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.08; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
     .story-deck { margin: 14px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+    .story-featured .story-deck { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
     .story-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: auto; padding-top: 19px; }
     .summary-button, .read-link { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); text-decoration: none; font-size: 11px; font-weight: 600; }
     .summary-button { padding: 0; border: 0; background: transparent; cursor: pointer; }
@@ -84,18 +87,57 @@ import { NewsFeedStore } from '../../core/services/news-feed.store';
     .generate-button:disabled { opacity: .6; cursor: wait; }
     @keyframes rise-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-    @media (max-width: 680px) { .story-featured { grid-template-columns: 1fr; } .story-featured .story-image { aspect-ratio: 1.6; min-height: 0; } .story-featured .story-copy { padding: 20px; } .story-featured h2 { font-size: 29px; } }
+    @media (max-width: 680px) { .story-featured { grid-template-columns: 1fr; max-height: none; } .story-featured .story-image { aspect-ratio: 1.6; min-height: 0; } .story-featured .story-copy { padding: 20px; } }
   `],
 })
-export class NewsCard {
+export class NewsCard implements AfterViewInit, OnDestroy {
     private readonly store = inject(NewsFeedStore);
+    private readonly api = inject(NewsApiService);
+    @ViewChild('imageTrigger') private imageTrigger?: ElementRef<HTMLElement>;
     @Input({ required: true }) article!: Article;
     @Input() featured = false;
     readonly expanded = signal(false);
     readonly summarizing = signal(false);
     readonly imageFailed = signal(false);
+    readonly fallbackImage = signal<string | null>(null);
+    private imageObserver?: IntersectionObserver;
+    private imageLookupStarted = false;
+
+    ngAfterViewInit(): void {
+        if (this.article.imageUrl) return;
+        if (typeof IntersectionObserver === 'undefined') {
+            void this.loadFallbackImage();
+            return;
+        }
+        this.imageObserver = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                this.imageObserver?.disconnect();
+                void this.loadFallbackImage();
+            }
+        }, { rootMargin: '200px' });
+        if (this.imageTrigger) this.imageObserver.observe(this.imageTrigger.nativeElement);
+    }
+
+    ngOnDestroy(): void {
+        this.imageObserver?.disconnect();
+    }
 
     toggleSummary(): void { this.expanded.update((value) => !value); }
+
+    onImageError(): void { this.imageFailed.set(true); }
+
+    private async loadFallbackImage(): Promise<void> {
+        if (this.imageLookupStarted || this.article.imageUrl) return;
+        this.imageLookupStarted = true;
+        try {
+            const result = await firstValueFrom(this.api.getArticleImage(this.article.id));
+            if (result.imageUrl) this.fallbackImage.set(result.imageUrl);
+            else this.imageFailed.set(true);
+        } catch (error) {
+            console.warn('Could not load article image:', error);
+            this.imageFailed.set(true);
+        }
+    }
 
     async requestSummary(): Promise<void> {
         if (this.summarizing() || this.article.aiSummary) return;

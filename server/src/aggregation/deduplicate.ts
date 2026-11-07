@@ -33,7 +33,7 @@ export function deduplicateArticles(articles: Article[], threshold = 0.58): Arti
         const sources = [...new Set(items.flatMap((item) => item.sources?.length ? item.sources : [item.source]))].sort();
         const bestSummary = [...items].sort((a, b) => b.summary.length - a.summary.length)[0]?.summary ?? anchor.summary;
         const imageUrl = items.find((item) => item.imageUrl)?.imageUrl ?? null;
-        const category = items.find((item) => item.category !== 'other')?.category ?? anchor.category;
+        const category = items.find((item) => item.category !== 'general')?.category ?? anchor.category;
         return { ...anchor, summary: bestSummary, imageUrl, category, sources };
     });
 }

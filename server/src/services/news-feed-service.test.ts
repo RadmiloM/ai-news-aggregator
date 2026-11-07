@@ -13,12 +13,12 @@ describe('NewsFeedService', () => {
     it('returns successful sources when another provider fails and caches the result', async () => {
         let time = now;
         const first: NewsProvider = { name: 'BBC', fetchArticles: vi.fn(async () => [story]) };
-        const down: NewsProvider = { name: 'Reuters', fetchArticles: vi.fn(async () => { throw new Error('offline'); }) };
+        const down: NewsProvider = { name: 'Danas', fetchArticles: vi.fn(async () => { throw new Error('offline'); }) };
         const service = new NewsFeedService([first, down], 600_000, () => time);
         const result = await service.getNews();
         const cached = await service.getNews();
         expect(result.articles).toHaveLength(1);
-        expect(result.sourceStatus).toEqual([{ name: 'BBC', ok: true, count: 1 }, { name: 'Reuters', ok: false, count: 0 }]);
+        expect(result.sourceStatus).toEqual([{ name: 'BBC', ok: true, count: 1 }, { name: 'Danas', ok: false, count: 0 }]);
         expect(cached).toBe(result);
         expect(first.fetchArticles).toHaveBeenCalledTimes(1);
         time += 600_001;
@@ -34,5 +34,17 @@ describe('NewsFeedService', () => {
         const second = service.getNews();
         resolveFeed([story]);
         expect(await first).toBe(await second);
+    });
+
+    it('returns failed source statuses even when every provider is unavailable', async () => {
+        const first: NewsProvider = { name: 'Guardian World', fetchArticles: async () => { throw new Error('offline'); } };
+        const second: NewsProvider = { name: 'Danas', fetchArticles: async () => { throw new Error('offline'); } };
+        const result = await new NewsFeedService([first, second], 600_000, () => now).getNews();
+
+        expect(result.articles).toEqual([]);
+        expect(result.sourceStatus).toEqual([
+            { name: 'Guardian World', ok: false, count: 0 },
+            { name: 'Danas', ok: false, count: 0 },
+        ]);
     });
 });

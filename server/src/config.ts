@@ -24,9 +24,9 @@ export const config = {
     geminiQueueLimit: positiveInt(process.env['GEMINI_QUEUE_LIMIT'], 20),
     feeds: [
         { name: 'BBC', url: process.env['RSS_BBC_URL'] || 'https://feeds.bbci.co.uk/news/world/rss.xml' },
-        { name: 'Reuters', url: process.env['RSS_REUTERS_URL'] || 'https://www.reuters.com/rssFeed/world' },
+        { name: 'Guardian World', url: process.env['RSS_GUARDIAN_URL'] || 'https://www.theguardian.com/world/rss' },
         { name: 'Al Jazeera', url: process.env['RSS_ALJAZEERA_URL'] || 'https://www.aljazeera.com/xml/rss/all.xml' },
         { name: 'N1 Serbia', url: process.env['RSS_N1_URL'] || 'https://n1info.rs/feed/' },
-        { name: 'B92', url: process.env['RSS_B92_URL'] || 'https://www.b92.net/rss/vesti.xml' },
+        { name: 'Danas', url: process.env['RSS_DANAS_URL'] || 'https://www.danas.rs/feed/' },
     ],
 };

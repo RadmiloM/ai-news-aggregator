@@ -34,9 +34,6 @@ export class NewsFeedService {
             count: result.status === 'fulfilled' ? result.value.length : 0,
         }));
         const articles = results.flatMap((result) => result.status === 'fulfilled' ? result.value : []);
-        if (results.length && results.every((result) => result.status === 'rejected')) {
-            throw new Error('All configured news providers failed.');
-        }
         const today = withinLast24Hours(articles, this.now());
         return { articles: rankArticles(deduplicateArticles(today), this.now()), updatedAt: new Date(this.now()).toISOString(), sourceStatus };
     }
