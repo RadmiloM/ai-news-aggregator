@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap');
+
+:root {
+  color-scheme: light;
+  --page: #f3f2ed;
+  --surface: #fbfaf6;
+  --surface-raised: #fffefa;
+  --ink: #202522;
+  --muted: #767b76;
+  --line: #dedfd8;
+  --accent: #c14932;
+  --accent-soft: #f2e4df;
+  --olive: #657160;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --page: #1d211f;
+  --surface: #242a27;
+  --surface-raised: #2a302d;
+  --ink: #f1f0e9;
+  --muted: #a4aaa3;
+  --line: #3b433e;
+  --accent: #e27c61;
+  --accent-soft: #3b2b26;
+  --olive: #b1c0a9;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  min-width: 320px;
+  background: var(--page);
+}
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--page);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+button {
+  color: inherit;
+}
+a {
+  color: inherit;
+}
+::selection {
+  color: #fff;
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
