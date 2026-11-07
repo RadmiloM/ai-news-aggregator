@@ -17,7 +17,7 @@ export interface Article {
 export interface NewsFeedResponse {
     articles: Article[];
     updatedAt: string;
-    sourceStatus: { name: string; ok: boolean; count: number }[];
+    sourceStatus: { name: string; ok: boolean; count: number; error?: string }[];
 }
 
 export interface SummaryResponse {

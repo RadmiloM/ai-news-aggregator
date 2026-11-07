@@ -46,7 +46,12 @@ const categories: { id: NewsCategory | 'all'; label: string }[] = [
             <label class="source-filter"><span>Source</span><select [ngModel]="selectedSource()" (ngModelChange)="selectedSource.set($event)" aria-label="Filter by news source"><option value="all">All sources</option>@for (source of store.sources(); track source) { <option [value]="source">{{ source }}</option> }</select></label>
             <span class="result-count">{{ filteredArticles().length }} STORIES</span>
           </div>
-          @if (unavailableSources()) { <div class="partial-warning" role="status">Unavailable sources: {{ unavailableSources() }}. @if (store.articles().length) { Showing available stories. } @else { No stories are available from the remaining sources. }</div> }
+          @if (unavailableSources()) {
+            <details class="partial-warning" role="status">
+              <summary>Unavailable sources: {{ unavailableSources() }}. @if (store.articles().length) { Showing available stories. } @else { No stories are available from the remaining sources. }</summary>
+              <ul>@for (source of unavailableSourceStatuses(); track source.name) { <li><strong>{{ source.name }}:</strong> {{ source.error || 'No error details were provided.' }}</li> }</ul>
+            </details>
+          }
           @if (store.loading()) {
             <div class="story-grid" aria-label="Loading headlines" aria-busy="true">@for (item of [1, 2, 3, 4, 5]; track item) { <div class="skeleton"><div class="skeleton-image"></div><div class="skeleton-lines"><i></i><i></i><i></i></div></div> }</div>
           } @else if (store.error() && !store.articles().length) {
@@ -125,6 +130,8 @@ const categories: { id: NewsCategory | 'all'; label: string }[] = [
     .state-panel p { margin: 6px 0 10px; color: var(--muted); font-size: 12px; }
     .text-button { padding: 0; border: 0; background: transparent; color: var(--accent); font-size: 11px; font-weight: 700; cursor: pointer; }
     .partial-warning { margin-top: 15px; padding: 10px 12px; border-left: 2px solid var(--accent); background: var(--accent-soft); color: var(--ink); font-size: 11px; }
+    .partial-warning summary { cursor: pointer; }
+    .partial-warning ul { display: grid; gap: 5px; padding-left: 20px; margin: 10px 0 0; }
     .source-credits { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 23px 0; margin-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; letter-spacing: .08em; }
     .source-credits > span:first-child { color: var(--accent); font-weight: 700; }
     .credit-name { color: var(--ink); font-weight: 600; letter-spacing: 0; }
@@ -155,6 +162,7 @@ export class NewsFeedPage implements OnInit, OnDestroy {
         return hasGlobal ? 'Global edition' : 'News edition';
     });
     readonly unavailableSources = computed(() => this.store.sourceStatus().filter((source) => !source.ok).map((source) => source.name).join(', '));
+    readonly unavailableSourceStatuses = computed(() => this.store.sourceStatus().filter((source) => !source.ok));
     readonly filteredArticles = computed(() => {
         const since = Date.now() - 24 * 60 * 60 * 1000;
         const query = this.query().trim().toLowerCase();

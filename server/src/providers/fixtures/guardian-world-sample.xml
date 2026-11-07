@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Guardian World sample</title>
+    <link>https://www.theguardian.com/world</link>
+    <item>
+      <title>Sample Guardian world headline</title>
+      <link>https://www.theguardian.com/world/2026/nov/07/sample-story</link>
+      <pubDate>Sat, 07 Nov 2026 10:00:00 GMT</pubDate>
+      <category domain="https://www.theguardian.com/world/world">World news</category>
+      <description><![CDATA[<p>Synthetic report text with an <strong>HTML</strong> description.</p><p><img src="https://images.example/guardian-description.jpg" alt=""></p>]]></description>
+      <media:content url="https://images.example/guardian-small.jpg" width="320" height="180" medium="image" />
+      <media:content url="https://images.example/guardian-large.jpg" width="1200" height="675" medium="image" />
+    </item>
+  </channel>
+</rss>

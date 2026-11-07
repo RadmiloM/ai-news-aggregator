@@ -3,8 +3,12 @@ import { rankArticles, withinLast24Hours } from '../aggregation/rank.js';
 import { Article } from '../types/article.js';
 import { NewsProvider } from '../providers/news-provider.js';
 
-export interface SourceStatus { name: string; ok: boolean; count: number; }
+export interface SourceStatus { name: string; ok: boolean; count: number; error?: string; }
 export interface FeedResult { articles: Article[]; updatedAt: string; sourceStatus: SourceStatus[]; }
+
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
 
 export class NewsFeedService {
     private cached: { result: FeedResult; expiresAt: number } | null = null;
@@ -32,6 +36,7 @@ export class NewsFeedService {
             name: this.providers[index]?.name ?? 'Unknown source',
             ok: result.status === 'fulfilled',
             count: result.status === 'fulfilled' ? result.value.length : 0,
+            ...(result.status === 'rejected' ? { error: errorMessage(result.reason) } : {}),
         }));
         const articles = results.flatMap((result) => result.status === 'fulfilled' ? result.value : []);
         const today = withinLast24Hours(articles, this.now());

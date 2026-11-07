@@ -18,7 +18,10 @@ describe('NewsFeedService', () => {
         const result = await service.getNews();
         const cached = await service.getNews();
         expect(result.articles).toHaveLength(1);
-        expect(result.sourceStatus).toEqual([{ name: 'BBC', ok: true, count: 1 }, { name: 'Danas', ok: false, count: 0 }]);
+        expect(result.sourceStatus).toEqual([
+            { name: 'BBC', ok: true, count: 1 },
+            { name: 'Danas', ok: false, count: 0, error: 'offline' },
+        ]);
         expect(cached).toBe(result);
         expect(first.fetchArticles).toHaveBeenCalledTimes(1);
         time += 600_001;
@@ -43,8 +46,8 @@ describe('NewsFeedService', () => {
 
         expect(result.articles).toEqual([]);
         expect(result.sourceStatus).toEqual([
-            { name: 'Guardian World', ok: false, count: 0 },
-            { name: 'Danas', ok: false, count: 0 },
+            { name: 'Guardian World', ok: false, count: 0, error: 'offline' },
+            { name: 'Danas', ok: false, count: 0, error: 'offline' },
         ]);
     });
 });

@@ -3,16 +3,19 @@ import { normalizeArticle } from '../aggregation/normalize-article.js';
 import { Article } from '../types/article.js';
 import { NewsProvider } from './news-provider.js';
 
-function firstValue(value: unknown): unknown {
-    return Array.isArray(value) ? value[0] : value;
-}
-
 function mediaUrl(value: unknown): string | null {
-    const media = firstValue(value);
-    if (!media || typeof media !== 'object') return null;
-    const fields = media as { $?: { url?: unknown }; url?: unknown };
-    const url = fields.$?.url ?? fields.url;
-    return typeof url === 'string' && url.trim() ? url : null;
+    const mediaItems = Array.isArray(value) ? value : [value];
+    const candidates = mediaItems.flatMap((media, index) => {
+        if (!media || typeof media !== 'object') return [];
+        const fields = media as { $?: { url?: unknown; width?: unknown }; url?: unknown; width?: unknown };
+        const url = fields.$?.url ?? fields.url;
+        if (typeof url !== 'string' || !url.trim()) return [];
+        const rawWidth = fields.$?.width ?? fields.width;
+        const parsedWidth = typeof rawWidth === 'number' ? rawWidth : Number(rawWidth);
+        return [{ url, width: Number.isFinite(parsedWidth) && parsedWidth >= 0 ? parsedWidth : -1, index }];
+    });
+    candidates.sort((left, right) => right.width - left.width || left.index - right.index);
+    return candidates[0]?.url ?? null;
 }
 
 function resolveImageUrl(value: string, articleUrl: string): string | null {
@@ -22,6 +25,16 @@ function resolveImageUrl(value: string, articleUrl: string): string | null {
     } catch {
         return null;
     }
+}
+
+function categoryLabels(value: unknown): string {
+    if (!Array.isArray(value)) return '';
+    return value.flatMap((category) => {
+        if (typeof category === 'string') return [category];
+        if (!category || typeof category !== 'object') return [];
+        const label = (category as { _?: unknown })._;
+        return typeof label === 'string' ? [label] : [];
+    }).join(' ');
 }
 
 function firstImageInHtml(value: unknown, articleUrl: string): string | null {
@@ -73,9 +86,7 @@ export class RssProvider implements NewsProvider {
     }
 
     async fetchArticles(): Promise<Article[]> {
-        const response = await fetch(this.feedUrl, { signal: AbortSignal.timeout(10_000), headers: { 'user-agent': 'DailyBrief/1.0 (+RSS news reader)' } });
-        if (!response.ok) throw new Error(`${this.name} RSS returned ${response.status}`);
-        const xml = await response.text();
+        const xml = await this.fetchFeedXml();
         const feed = await this.parser.parseString(xml);
         return feed.items.flatMap((item) => {
             const raw = item as typeof item & Record<string, unknown>;
@@ -87,9 +98,53 @@ export class RssProvider implements NewsProvider {
                 url: articleUrl,
                 imageUrl,
                 publishedAt: item.isoDate || item.pubDate,
-                category: item.categories?.join(' '),
+                category: categoryLabels(item.categories),
             }, this.name);
             return article ? [article] : [];
         });
+    }
+
+    private async fetchFeedXml(): Promise<string> {
+        let lastError: unknown;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            let response: Response | undefined;
+            try {
+                response = await fetch(this.feedUrl, {
+                    signal: AbortSignal.timeout(10_000),
+                    headers: {
+                        'user-agent': 'Mozilla/5.0 NewsAggregator/1.0',
+                        accept: 'application/rss+xml',
+                    },
+                });
+                if (!response.ok) {
+                    const body = (await response.text().catch(() => '')).trim().slice(0, 500);
+                    const message = `${this.name} RSS returned HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}${body ? `: ${body}` : ''}`;
+                    const error = new Error(message);
+                    console.error('RSS feed request failed', {
+                        source: this.name,
+                        url: this.feedUrl,
+                        attempt,
+                        status: response.status,
+                        error: error.message,
+                        headers: Object.fromEntries(response.headers.entries()),
+                    });
+                    lastError = error;
+                    continue;
+                }
+                return await response.text();
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                console.error('RSS feed request failed', {
+                    source: this.name,
+                    url: this.feedUrl,
+                    attempt,
+                    status: response?.status ?? null,
+                    error: message,
+                    headers: response ? Object.fromEntries(response.headers.entries()) : null,
+                });
+                lastError = error;
+            }
+        }
+        throw lastError instanceof Error ? lastError : new Error(String(lastError));
     }
 }
